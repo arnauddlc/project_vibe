@@ -1,0 +1,24 @@
+.DS_Store
+.env
+.env.*
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# Playwright
+playwright-report/
+test-results/
+
+# Misc
+.turbo/
+.vercel/

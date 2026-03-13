@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arena Shooter — 3D FPS</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; background: #c5d8eb; font-family: 'Segoe UI', system-ui, sans-serif; }
+    #canvas-container { position: fixed; inset: 0; }
+    #hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 20px;
+    }
+    #hud-panel {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    #health-block {
+      background: rgba(255, 255, 255, 0.88);
+      border: 2px solid #5c9ead;
+      border-radius: 10px;
+      padding: 10px 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    #health-block label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: #2d5016;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    #health-bar {
+      width: 200px;
+      height: 18px;
+      background: rgba(200, 220, 220, 0.8);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    #health-fill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #4dd0e1, #26c6da);
+      border-radius: 5px;
+      transition: width 0.2s;
+    }
+    #enemy-block {
+      background: rgba(255, 255, 255, 0.88);
+      border: 2px solid #ff9800;
+      border-radius: 10px;
+      padding: 10px 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    #enemy-block label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: #e65100;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    #enemy-hp-text {
+      font-size: 22px;
+      font-weight: 700;
+      color: #2d5016;
+    }
+    #radar-block {
+      background: rgba(255, 255, 255, 0.88);
+      border: 2px solid #5c9ead;
+      border-radius: 10px;
+      padding: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    #radar-block label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: #2d5016;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+      text-align: center;
+    }
+    #radar-canvas {
+      display: block;
+      border-radius: 6px;
+      width: 140px;
+      height: 140px;
+    }
+    #crosshair {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 24px;
+      height: 24px;
+      border: 2px solid rgba(0, 102, 128, 0.7);
+      border-radius: 50%;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.5);
+    }
+    #crosshair::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 4px;
+      height: 4px;
+      background: #006680;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+    #instructions {
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      color: #3d5a3d;
+      font-size: 13px;
+      pointer-events: none;
+      text-shadow: 0 1px 1px rgba(255,255,255,0.5);
+    }
+    #game-over, #you-win {
+      position: fixed;
+      inset: 0;
+      background: rgba(220, 230, 240, 0.92);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      color: #1a3a1a;
+      font-size: 32px;
+      pointer-events: auto;
+      font-weight: 700;
+    }
+    #game-over.show, #you-win.show { display: flex; }
+    #game-over button, #you-win button {
+      margin-top: 24px;
+      padding: 12px 32px;
+      font-size: 18px;
+      cursor: pointer;
+      background: #5c9ead;
+      border: none;
+      color: #fff;
+      border-radius: 8px;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    #you-win button { background: #66bb6a; }
+  </style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+  <div id="hud">
+    <div id="hud-panel">
+      <div id="health-block">
+        <label>Health</label>
+        <div id="health-bar"><div id="health-fill"></div></div>
+      </div>
+      <div id="enemy-block">
+        <label>Enemy HP</label>
+        <span id="enemy-hp-text">100</span>
+      </div>
+      <div id="radar-block">
+        <label>Radar</label>
+        <canvas id="radar-canvas" width="140" height="140"></canvas>
+      </div>
+    </div>
+    <div id="crosshair"></div>
+    <div></div>
+  </div>
+  <div id="instructions">Arrow keys: move and turn · Space: shoot</div>
+  <div id="game-over">
+    <span>GAME OVER</span>
+    <button onclick="location.reload()">Play again</button>
+  </div>
+  <div id="you-win">
+    <span>YOU WIN</span>
+    <button onclick="location.reload()">Play again</button>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>

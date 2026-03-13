@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "tables": [
+    {
+      "name": "users",
+      "columns": [
+        { "name": "id", "type": "TEXT", "primary_key": true },
+        { "name": "username", "type": "TEXT", "nullable": false, "unique": true },
+        { "name": "created_at", "type": "TEXT", "nullable": false }
+      ]
+    },
+    {
+      "name": "boards",
+      "columns": [
+        { "name": "id", "type": "TEXT", "primary_key": true },
+        { "name": "user_id", "type": "TEXT", "nullable": false, "unique": true },
+        { "name": "title", "type": "TEXT", "nullable": false },
+        { "name": "created_at", "type": "TEXT", "nullable": false },
+        { "name": "updated_at", "type": "TEXT", "nullable": false }
+      ],
+      "foreign_keys": [
+        {
+          "column": "user_id",
+          "references": "users.id",
+          "on_delete": "CASCADE"
+        }
+      ]
+    },
+    {
+      "name": "columns",
+      "columns": [
+        { "name": "id", "type": "TEXT", "primary_key": true },
+        { "name": "board_id", "type": "TEXT", "nullable": false },
+        { "name": "title", "type": "TEXT", "nullable": false },
+        { "name": "position", "type": "INTEGER", "nullable": false }
+      ],
+      "foreign_keys": [
+        {
+          "column": "board_id",
+          "references": "boards.id",
+          "on_delete": "CASCADE"
+        }
+      ],
+      "indexes": [
+        { "name": "idx_columns_board", "columns": ["board_id"] }
+      ]
+    },
+    {
+      "name": "cards",
+      "columns": [
+        { "name": "id", "type": "TEXT", "primary_key": true },
+        { "name": "column_id", "type": "TEXT", "nullable": false },
+        { "name": "title", "type": "TEXT", "nullable": false },
+        { "name": "details", "type": "TEXT", "nullable": false },
+        { "name": "position", "type": "INTEGER", "nullable": false },
+        { "name": "created_at", "type": "TEXT", "nullable": false },
+        { "name": "updated_at", "type": "TEXT", "nullable": false }
+      ],
+      "foreign_keys": [
+        {
+          "column": "column_id",
+          "references": "columns.id",
+          "on_delete": "CASCADE"
+        }
+      ],
+      "indexes": [
+        { "name": "idx_cards_column", "columns": ["column_id"] }
+      ]
+    }
+  ]
+}

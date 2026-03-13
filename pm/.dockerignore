@@ -1,0 +1,9 @@
+**/.DS_Store
+**/.git
+**/.next
+**/node_modules
+**/test-results
+**/dist
+**/__pycache__
+**/.pytest_cache
+**/.venv
