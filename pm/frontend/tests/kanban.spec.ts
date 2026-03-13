@@ -1,4 +1,19 @@
 import { expect, test, type Page } from "@playwright/test";
+import { initialData } from "../src/lib/kanban";
+
+const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
+const buildAiBoard = () => {
+  const board = clone(initialData);
+  const cardId = "card-ai-1";
+  board.cards[cardId] = {
+    id: cardId,
+    title: "AI follow-up",
+    details: "Suggested via chat.",
+  };
+  board.columns[0].cardIds.push(cardId);
+  return board;
+};
 
 const login = async (page: Page) => {
   await page.goto("/");
@@ -124,4 +139,28 @@ test("persists board updates across logout", async ({ page }) => {
   await page.getByRole("button", { name: /sign in/i }).click();
 
   await expect(page.getByRole("heading", { name: cardTitle })).toBeVisible();
+});
+
+test("uses the AI chat to update the board", async ({ page }) => {
+  const aiBoard = buildAiBoard();
+  await page.route("**/api/ai/board**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        message: "Added a card via AI.",
+        board: aiBoard,
+        applied: true,
+      }),
+    });
+  });
+
+  await login(page);
+  await page.getByTestId("ai-input").fill("Add a follow-up card");
+  await page.getByTestId("ai-send").click();
+
+  await expect(page.getByText(/added a card via ai/i)).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "AI follow-up" })
+  ).toBeVisible();
 });

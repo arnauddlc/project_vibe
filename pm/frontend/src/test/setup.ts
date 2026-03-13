@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom";
 import { beforeEach, vi } from "vitest";
-import { initialData } from "@/lib/kanban";
+import { initialData, type BoardData } from "@/lib/kanban";
 
 const createStorage = () => {
   let store: Record<string, string> = {};
@@ -26,7 +26,7 @@ if (!window.localStorage || typeof window.localStorage.getItem !== "function") {
 }
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
-const boards = new Map<string, unknown>();
+const boards = new Map<string, BoardData>();
 
 const getUserId = (input: RequestInfo | URL) => {
   const url = new URL(
@@ -44,6 +44,35 @@ vi.stubGlobal(
   "fetch",
   vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const userId = getUserId(input);
+    const url = new URL(
+      typeof input === "string" ? input : input.toString(),
+      "http://localhost"
+    );
+
+    if (url.pathname === "/api/ai/board" && init?.method === "POST") {
+      const existing = boards.get(userId);
+      const board: BoardData = existing ? clone(existing) : clone(initialData);
+      const cardId = "card-ai-1";
+
+      if (!board.cards[cardId]) {
+        board.cards[cardId] = {
+          id: cardId,
+          title: "AI planned follow-up",
+          details: "Added via AI suggestion.",
+        };
+        board.columns[0].cardIds.push(cardId);
+      }
+
+      boards.set(userId, clone(board));
+      return {
+        ok: true,
+        json: async () => ({
+          message: "Added a card via AI.",
+          board: clone(board),
+          applied: true,
+        }),
+      } as Response;
+    }
 
     if (init?.method === "PUT" && init.body) {
       const body =
@@ -56,7 +85,7 @@ vi.stubGlobal(
     }
 
     const existing = boards.get(userId);
-    const board = existing ? clone(existing) : clone(initialData);
+    const board: BoardData = existing ? clone(existing) : clone(initialData);
     boards.set(userId, clone(board));
     return {
       ok: true,

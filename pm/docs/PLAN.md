@@ -102,39 +102,39 @@ Success criteria:
 - UI remains functional with backend integration.
 
 **Part 8: AI Connectivity**
-- [ ] Add backend client for OpenRouter using `OPENROUTER_API_KEY`.
-- [ ] Implement a simple endpoint that asks the model “2+2”.
-- [ ] Ensure requests use model `openai/gpt-oss-120b`.
+- [x] Add backend client for OpenRouter using `OPENROUTER_API_KEY`.
+- [x] Implement a simple endpoint that asks the model “2+2”.
+- [x] Ensure requests use model `openai/gpt-oss-120b`.
 
 Tests:
-- Unit test with mocked OpenRouter response.
-- Manual smoke test of live call (when API key available).
+- [x] Unit test with mocked OpenRouter response.
+- [ ] Manual smoke test of live call (when API key available).
 
 Success criteria:
 - Backend can successfully call OpenRouter and return a response.
 
 **Part 9: Structured Outputs for Board Updates**
-- [ ] Define a structured response schema for AI output.
-- [ ] Send current board JSON + conversation history + user question.
-- [ ] Parse structured outputs and apply optional board updates.
-- [ ] Add tests for schema validation and board mutation logic.
+- [x] Define a structured response schema for AI output.
+- [x] Send current board JSON + conversation history + user question.
+- [x] Parse structured outputs and apply optional board updates.
+- [x] Add tests for schema validation and board mutation logic.
 
 Tests:
-- Unit tests for parsing/validation.
-- Integration test: AI response updates board state as expected.
+- [x] Unit tests for parsing/validation.
+- [x] Integration test: AI response updates board state as expected.
 
 Success criteria:
 - AI responses can update the Kanban board deterministically.
 
 **Part 10: AI Sidebar UI**
-- [ ] Add a sidebar chat UI to the frontend.
-- [ ] Wire chat to backend AI endpoint.
-- [ ] Apply AI-proposed board updates and refresh UI automatically.
-- [ ] Add E2E tests for chat + board update behavior.
+- [x] Add a sidebar chat UI to the frontend.
+- [x] Wire chat to backend AI endpoint.
+- [x] Apply AI-proposed board updates and refresh UI automatically.
+- [x] Add E2E tests for chat + board update behavior.
 
 Tests:
-- Frontend unit tests for chat components.
-- E2E test covering chat request and board update.
+- [x] Frontend unit tests for chat components.
+- [x] E2E test covering chat request and board update.
 
 Success criteria:
 - Sidebar chat works end-to-end and updates the board when instructed.

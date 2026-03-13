@@ -19,8 +19,10 @@ This is a Next.js (App Router) frontend for the Kanban board. It authenticates l
 - `src/components/KanbanCard.tsx`: Sortable card with delete action.
 - `src/components/KanbanCardPreview.tsx`: Drag overlay preview.
 - `src/components/NewCardForm.tsx`: Add-card form with local form state.
+- `src/components/AISidebar.tsx`: AI chat sidebar wired to `/api/ai/board`.
 - `src/lib/kanban.ts`: Board data types, `initialData`, `moveCard`, `createId`.
 - `src/components/KanbanBoard.test.tsx`: Unit tests for rename/add/remove.
+- `src/components/AISidebar.test.tsx`: Unit tests for chat sidebar behavior.
 - `tests/kanban.spec.ts`: Playwright E2E coverage for render/add/move.
 
 ## Key Behaviors
@@ -29,6 +31,7 @@ This is a Next.js (App Router) frontend for the Kanban board. It authenticates l
 - Drag and drop uses `DndContext` with `closestCorners` collision detection.
 - Column rename is immediate and persisted via the API.
 - Adding and deleting cards updates the local board state and persists via the API.
+- AI chat calls `POST /api/ai/board` and applies returned board updates.
 
 ## Commands
 - `npm run dev`: local dev server.
