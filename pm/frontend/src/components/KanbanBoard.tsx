@@ -24,6 +24,7 @@ import { createId, moveCard, type BoardData, type Priority } from "@/lib/kanban"
 type KanbanBoardProps = {
   boardId: string;
   boardTitle: string;
+  boardDescription?: string;
   token: string;
   onBack: () => void;
 };
@@ -40,7 +41,7 @@ const initialStatus: BoardStatus = {
   errorMessage: null,
 };
 
-export const KanbanBoard = ({ boardId, boardTitle, token, onBack }: KanbanBoardProps) => {
+export const KanbanBoard = ({ boardId, boardTitle, boardDescription, token, onBack }: KanbanBoardProps) => {
   const [board, setBoard] = useState<BoardData | null>(null);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [status, setStatus] = useState<BoardStatus>(initialStatus);
@@ -303,6 +304,11 @@ export const KanbanBoard = ({ boardId, boardTitle, token, onBack }: KanbanBoardP
               <h1 className="mt-0.5 font-display text-2xl font-semibold text-[var(--navy-dark)]">
                 {boardTitle}
               </h1>
+              {boardDescription ? (
+                <p className="mt-0.5 max-w-sm truncate text-[11px] text-[var(--gray-text)]" data-testid="board-description">
+                  {boardDescription}
+                </p>
+              ) : null}
             </div>
           </div>
           <div className="flex items-center gap-3">

@@ -83,6 +83,21 @@ describe("BoardSelector", () => {
     });
   });
 
+  it("deletes account after confirmation", async () => {
+    const onLogout = vi.fn();
+    render(<BoardSelector {...selectorProps} onLogout={onLogout} />);
+    await screen.findByTestId("boards-list");
+
+    await userEvent.click(screen.getByTestId("change-password-button"));
+    await screen.findByTestId("delete-account-button");
+    await userEvent.click(screen.getByTestId("delete-account-button"));
+    await userEvent.click(screen.getByTestId("confirm-delete-account"));
+
+    await waitFor(() => {
+      expect(onLogout).toHaveBeenCalledOnce();
+    });
+  });
+
   it("edits and saves board description", async () => {
     render(<BoardSelector {...selectorProps} />);
     await screen.findByTestId("boards-list");

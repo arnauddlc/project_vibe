@@ -118,6 +118,66 @@ def test_set_board_description_wrong_owner_returns_404(client, auth):
     assert response.status_code == 404
 
 
+# --- Account deletion tests ---
+
+def test_delete_account_returns_204(client, auth):
+    response = client.delete("/api/auth/account", headers=auth["headers"])
+    assert response.status_code == 204
+
+
+def test_delete_account_removes_user_data(client, auth):
+    boards_before = client.get("/api/boards", headers=auth["headers"]).json()
+    assert len(boards_before) > 0
+
+    client.delete("/api/auth/account", headers=auth["headers"])
+
+    # Token should no longer be valid
+    assert client.get("/api/boards", headers=auth["headers"]).status_code == 401
+
+
+def test_delete_account_removes_boards(client):
+    # Register and get boards
+    resp = client.post("/api/auth/register", json={"username": "alice", "password": "pass1234"})
+    token = resp.json()["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    boards = client.get("/api/boards", headers=headers).json()
+    board_id = boards[0]["id"]
+
+    # Delete account
+    client.delete("/api/auth/account", headers=headers)
+
+    # Re-register same username should succeed (old user deleted)
+    resp2 = client.post("/api/auth/register", json={"username": "alice", "password": "newpass99"})
+    assert resp2.status_code == 201
+
+    # Old board ID should not be accessible by new user
+    new_token = resp2.json()["token"]
+    new_headers = {"Authorization": f"Bearer {new_token}"}
+    assert client.get(f"/api/boards/{board_id}", headers=new_headers).status_code == 404
+
+
+def test_delete_account_requires_auth(client):
+    response = client.delete("/api/auth/account")
+    assert response.status_code == 401
+
+
+# --- Default board priority tests ---
+
+def test_default_board_has_correct_priorities(client):
+    resp = client.post("/api/auth/register", json={"username": "carol", "password": "pass1234"})
+    token = resp.json()["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    boards = client.get("/api/boards", headers=headers).json()
+    board_id = boards[0]["id"]
+    board = client.get(f"/api/boards/{board_id}", headers=headers).json()
+
+    # Verify not all cards have "medium" priority (the bug we fixed)
+    priorities = {card["priority"] for card in board["cards"].values()}
+    assert "high" in priorities
+    assert "low" in priorities
+
+
 def test_board_description_can_be_cleared(client, auth):
     boards = client.get("/api/boards", headers=auth["headers"]).json()
     board_id = boards[0]["id"]

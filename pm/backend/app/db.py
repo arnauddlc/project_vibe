@@ -248,6 +248,12 @@ def create_user_with_password(conn: sqlite3.Connection, username: str, password:
     return user_id
 
 
+def delete_user(conn: sqlite3.Connection, user_id: str) -> bool:
+    """Delete user and all associated data (cascades to sessions, boards, columns, cards). Returns True if deleted."""
+    result = conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    return result.rowcount > 0
+
+
 def update_password(conn: sqlite3.Connection, user_id: str, new_password: str) -> None:
     """Update the hashed password for a user."""
     conn.execute(
@@ -395,6 +401,8 @@ def build_default_board(board_id: str) -> dict:
             "id": new_id,
             "title": card["title"],
             "details": card["details"],
+            "priority": card.get("priority", "medium"),
+            "due_date": card.get("due_date"),
         }
 
     return {"columns": columns, "cards": cards}

@@ -154,6 +154,27 @@ vi.stubGlobal(
       return makeResponse(null, 204);
     }
 
+    if (pathname === "/api/auth/account" && method === "DELETE") {
+      if (!token || !sessions.has(token)) return makeResponse({ detail: "Unauthorized" }, 401);
+      const sess = sessions.get(token)!;
+      // Remove user's boards and metas
+      const userBoardsKey = `user-boards-${sess.userId}`;
+      const boardIds = JSON.parse(localStorage.getItem(userBoardsKey) ?? "[]") as string[];
+      boardIds.forEach((id) => { boards.delete(id); boardMetas.delete(id); });
+      localStorage.removeItem(userBoardsKey);
+      // Remove seed user's board if they match
+      if (sess.userId === SEED_USER_ID) {
+        boards.delete(SEED_BOARD_ID);
+        boardMetas.delete(SEED_BOARD_ID);
+      }
+      // Invalidate all sessions for this user
+      for (const [t, s] of sessions.entries()) {
+        if (s.userId === sess.userId) sessions.delete(t);
+      }
+      users.delete(sess.username);
+      return makeResponse(null, 204);
+    }
+
     if (pathname === "/api/auth/password" && method === "PATCH") {
       if (!token || !sessions.has(token)) return makeResponse({ detail: "Unauthorized" }, 401);
       const sess = sessions.get(token)!;

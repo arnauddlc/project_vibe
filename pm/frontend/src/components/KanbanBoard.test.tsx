@@ -6,6 +6,7 @@ import { vi } from "vitest";
 const boardProps = {
   boardId: "board-1",
   boardTitle: "Test Board",
+  boardDescription: "",
   token: "test-token",
   onBack: vi.fn(),
 };
@@ -112,6 +113,17 @@ describe("KanbanBoard", () => {
     const editBtn = screen.getByTestId("edit-card-card-1");
     await userEvent.click(editBtn);
     expect(screen.getByTestId("edit-title-card-1")).toBeInTheDocument();
+  });
+
+  it("shows board description when provided", async () => {
+    render(<KanbanBoard {...boardProps} boardDescription="Tracks Q2 roadmap items" />);
+    expect(await screen.findByTestId("board-description")).toHaveTextContent("Tracks Q2 roadmap items");
+  });
+
+  it("does not show description element when description is empty", async () => {
+    render(<KanbanBoard {...boardProps} boardDescription="" />);
+    await screen.findByTestId("back-button");
+    expect(screen.queryByTestId("board-description")).not.toBeInTheDocument();
   });
 
   it("moves a column left", async () => {

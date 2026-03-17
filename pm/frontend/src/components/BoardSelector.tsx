@@ -5,6 +5,7 @@ import { KanbanBoard } from "@/components/KanbanBoard";
 import {
   changePassword,
   createBoard,
+  deleteAccount,
   deleteBoard,
   fetchBoards,
   renameBoard,
@@ -94,6 +95,7 @@ export const BoardSelector = ({ token, username, onLogout }: BoardSelectorProps)
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [editingDescriptionId, setEditingDescriptionId] = useState<string | null>(null);
   const [descriptionValue, setDescriptionValue] = useState("");
+  const [confirmDeleteAccount, setConfirmDeleteAccount] = useState(false);
 
   const loadBoards = useCallback(async () => {
     setIsLoading(true);
@@ -150,6 +152,16 @@ export const BoardSelector = ({ token, username, onLogout }: BoardSelectorProps)
     }
   };
 
+  const handleDeleteAccount = async () => {
+    try {
+      await deleteAccount(token);
+      onLogout();
+    } catch {
+      setErrorMessage("Failed to delete account");
+      setConfirmDeleteAccount(false);
+    }
+  };
+
   const handleChangePassword = async () => {
     setPasswordError(null);
     setIsChangingPassword(true);
@@ -189,6 +201,7 @@ export const BoardSelector = ({ token, username, onLogout }: BoardSelectorProps)
       <KanbanBoard
         boardId={selectedBoard.id}
         boardTitle={selectedBoard.title}
+        boardDescription={selectedBoard.description}
         token={token}
         onBack={() => void handleBoardBack()}
       />
@@ -241,7 +254,7 @@ export const BoardSelector = ({ token, username, onLogout }: BoardSelectorProps)
         </header>
 
         {showPasswordForm ? (
-          <div className="rounded-2xl border border-[var(--stroke)] bg-white/90 p-5 shadow-[var(--shadow)]" data-testid="password-form">
+          <div className="rounded-2xl border border-[var(--stroke)] bg-white/90 p-5 shadow-[var(--shadow)] space-y-4" data-testid="password-form">
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--navy-dark)]">Change Password</p>
             {passwordSuccess ? (
               <p className="text-xs font-semibold text-[var(--primary-blue)]" data-testid="password-success">
@@ -288,6 +301,38 @@ export const BoardSelector = ({ token, username, onLogout }: BoardSelectorProps)
                 ) : null}
               </div>
             )}
+            <div className="border-t border-[var(--stroke)] pt-4">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--secondary-purple)]">Danger Zone</p>
+              {confirmDeleteAccount ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[var(--navy-dark)]">This will permanently delete your account and all boards. Are you sure?</span>
+                  <button
+                    type="button"
+                    onClick={() => void handleDeleteAccount()}
+                    className="rounded-full border border-[rgba(117,57,145,0.35)] bg-[rgba(117,57,145,0.08)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--secondary-purple)]"
+                    data-testid="confirm-delete-account"
+                  >
+                    Delete account
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDeleteAccount(false)}
+                    className="rounded-full border border-[var(--stroke)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--gray-text)]"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteAccount(true)}
+                  className="rounded-full border border-[rgba(117,57,145,0.35)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--secondary-purple)] transition hover:bg-[rgba(117,57,145,0.08)]"
+                  data-testid="delete-account-button"
+                >
+                  Delete account
+                </button>
+              )}
+            </div>
           </div>
         ) : null}
 

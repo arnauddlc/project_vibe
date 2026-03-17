@@ -17,6 +17,7 @@ from app.db import (
     create_user_with_password,
     delete_board_for_user,
     delete_session,
+    delete_user,
     get_board_for_user,
     get_board_description,
     get_or_create_board,
@@ -122,6 +123,13 @@ def logout(authorization: Optional[str] = Header(None)):
         token = authorization[7:]
         with connect() as conn:
             delete_session(conn, token)
+    return Response(status_code=204)
+
+
+@app.delete("/api/auth/account", status_code=204)
+def delete_account(user_id: str = Depends(get_current_user)):
+    with connect() as conn:
+        delete_user(conn, user_id)
     return Response(status_code=204)
 
 

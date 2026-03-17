@@ -134,6 +134,11 @@ export const updateBoardDescription = async (
   return response.json() as Promise<BoardSummary>;
 };
 
+export const deleteAccount = async (token: string): Promise<void> => {
+  const response = await apiFetch("/api/auth/account", { method: "DELETE" }, token);
+  if (!response.ok) throw new Error("Failed to delete account");
+};
+
 export const changePassword = async (
   token: string,
   currentPassword: string,
