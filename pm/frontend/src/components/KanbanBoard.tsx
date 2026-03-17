@@ -16,10 +16,14 @@ import {
 import { AISidebar } from "@/components/AISidebar";
 import { KanbanColumn } from "@/components/KanbanColumn";
 import { KanbanCardPreview } from "@/components/KanbanCardPreview";
-import { createId, moveCard, type BoardData } from "@/lib/kanban";
+import { apiFetch } from "@/lib/api";
+import { createId, moveCard, type BoardData, type Priority } from "@/lib/kanban";
 
 type KanbanBoardProps = {
-  userId: string;
+  boardId: string;
+  boardTitle: string;
+  token: string;
+  onBack: () => void;
 };
 
 type BoardStatus = {
@@ -34,7 +38,7 @@ const initialStatus: BoardStatus = {
   errorMessage: null,
 };
 
-export const KanbanBoard = ({ userId }: KanbanBoardProps) => {
+export const KanbanBoard = ({ boardId, boardTitle, token, onBack }: KanbanBoardProps) => {
   const [board, setBoard] = useState<BoardData | null>(null);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [status, setStatus] = useState<BoardStatus>(initialStatus);
@@ -55,9 +59,7 @@ export const KanbanBoard = ({ userId }: KanbanBoardProps) => {
   const fetchBoard = useCallback(async () => {
     setStatus((prev) => ({ ...prev, isLoading: true, errorMessage: null }));
     try {
-      const response = await fetch(
-        `/api/board?user_id=${encodeURIComponent(userId)}`
-      );
+      const response = await apiFetch(`/api/boards/${boardId}`, {}, token);
       if (!response.ok) {
         throw new Error(`Failed to load board (${response.status})`);
       }
@@ -72,18 +74,18 @@ export const KanbanBoard = ({ userId }: KanbanBoardProps) => {
     } finally {
       setStatus((prev) => ({ ...prev, isLoading: false }));
     }
-  }, [userId]);
+  }, [boardId, token]);
 
   const persistBoard = async (nextBoard: BoardData) => {
     setStatus((prev) => ({ ...prev, isSaving: true, errorMessage: null }));
     try {
-      const response = await fetch(
-        `/api/board?user_id=${encodeURIComponent(userId)}`,
+      const response = await apiFetch(
+        `/api/boards/${boardId}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(nextBoard),
-        }
+        },
+        token
       );
       if (!response.ok) {
         throw new Error(`Failed to save board (${response.status})`);
@@ -109,11 +111,8 @@ export const KanbanBoard = ({ userId }: KanbanBoardProps) => {
   };
 
   useEffect(() => {
-    if (!userId) {
-      return;
-    }
     void fetchBoard();
-  }, [userId, fetchBoard]);
+  }, [fetchBoard]);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveCardId(event.active.id as string);
@@ -142,13 +141,13 @@ export const KanbanBoard = ({ userId }: KanbanBoardProps) => {
     }));
   };
 
-  const handleAddCard = (columnId: string, title: string, details: string) => {
+  const handleAddCard = (columnId: string, title: string, details: string, priority: Priority = "medium") => {
     const id = createId("card");
     applyBoardUpdate((prev) => ({
       ...prev,
       cards: {
         ...prev.cards,
-        [id]: { id, title, details: details || "No details yet." },
+        [id]: { id, title, details: details || "No details yet.", priority },
       },
       columns: prev.columns.map((column) =>
         column.id === columnId
@@ -172,6 +171,29 @@ export const KanbanBoard = ({ userId }: KanbanBoardProps) => {
                 cardIds: column.cardIds.filter((id) => id !== cardId),
               }
             : column
+        ),
+      };
+    });
+  };
+
+  const handleAddColumn = () => {
+    const id = createId("col");
+    applyBoardUpdate((prev) => ({
+      ...prev,
+      columns: [...prev.columns, { id, title: "New Column", cardIds: [] }],
+    }));
+  };
+
+  const handleDeleteColumn = (columnId: string) => {
+    applyBoardUpdate((prev) => {
+      const column = prev.columns.find((c) => c.id === columnId);
+      if (!column) return prev;
+      const cardIdsToRemove = new Set(column.cardIds);
+      return {
+        ...prev,
+        columns: prev.columns.filter((c) => c.id !== columnId),
+        cards: Object.fromEntries(
+          Object.entries(prev.cards).filter(([id]) => !cardIdsToRemove.has(id))
         ),
       };
     });
@@ -213,68 +235,79 @@ export const KanbanBoard = ({ userId }: KanbanBoardProps) => {
       <div className="pointer-events-none absolute left-0 top-0 h-[420px] w-[420px] -translate-x-1/3 -translate-y-1/3 rounded-full bg-[radial-gradient(circle,_rgba(32,157,215,0.25)_0%,_rgba(32,157,215,0.05)_55%,_transparent_70%)]" />
       <div className="pointer-events-none absolute bottom-0 right-0 h-[520px] w-[520px] translate-x-1/4 translate-y-1/4 rounded-full bg-[radial-gradient(circle,_rgba(117,57,145,0.18)_0%,_rgba(117,57,145,0.05)_55%,_transparent_75%)]" />
 
-      <main className="relative mx-auto flex min-h-screen max-w-[1500px] flex-col gap-10 px-6 pb-16 pt-12">
-        <header className="flex flex-col gap-6 rounded-[32px] border border-[var(--stroke)] bg-white/80 p-8 shadow-[var(--shadow)] backdrop-blur">
-          <div className="flex flex-wrap items-start justify-between gap-6">
+      <main className="relative mx-auto flex min-h-screen max-w-[1600px] flex-col gap-6 px-6 pb-12 pt-6">
+        <header className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--stroke)] bg-white/80 px-6 py-4 shadow-[var(--shadow)] backdrop-blur">
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={onBack}
+              className="rounded-full border border-[var(--stroke)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--gray-text)] transition hover:text-[var(--navy-dark)]"
+              data-testid="back-button"
+            >
+              All boards
+            </button>
+            <div className="hidden h-8 w-px bg-[var(--stroke)] sm:block" />
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[var(--gray-text)]">
-                Single Board Kanban
+              <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-[var(--gray-text)]">
+                Kanban Board
               </p>
-              <h1 className="mt-3 font-display text-4xl font-semibold text-[var(--navy-dark)]">
-                Kanban Studio
+              <h1 className="mt-0.5 font-display text-2xl font-semibold text-[var(--navy-dark)]">
+                {boardTitle}
               </h1>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--gray-text)]">
-                Keep momentum visible. Rename columns, drag cards between stages,
-                and capture quick notes without getting buried in settings.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface)] px-5 py-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[var(--gray-text)]">
-                Focus
-              </p>
-              <p className="mt-2 text-lg font-semibold text-[var(--primary-blue)]">
-                One board. Five columns. Zero clutter.
-              </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-4">
-            {board.columns.map((column) => (
-              <div
-                key={column.id}
-                className="flex items-center gap-2 rounded-full border border-[var(--stroke)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--navy-dark)]"
-              >
-                <span className="h-2 w-2 rounded-full bg-[var(--accent-yellow)]" />
-                {column.title}
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--gray-text)]">
-            {status.isSaving ? <span>Saving…</span> : null}
+          <div className="flex items-center gap-3">
+            {status.isSaving ? (
+              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--gray-text)]">
+                Saving…
+              </span>
+            ) : null}
             {status.errorMessage ? (
-              <span className="rounded-full border border-[rgba(117,57,145,0.35)] bg-[rgba(117,57,145,0.08)] px-3 py-1 text-[10px] text-[var(--secondary-purple)]">
+              <span className="rounded-full border border-[rgba(117,57,145,0.35)] bg-[rgba(117,57,145,0.08)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--secondary-purple)]">
                 {status.errorMessage}
               </span>
             ) : null}
+            <div className="flex items-center gap-2 rounded-full border border-[var(--stroke)] bg-[var(--surface)] px-3 py-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-yellow)]" />
+              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--navy-dark)]">
+                {board.columns.length} columns · {Object.keys(board.cards).length} cards
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleAddColumn}
+              className="flex items-center gap-1.5 rounded-full border border-[var(--stroke)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--primary-blue)] transition hover:border-[var(--primary-blue)]"
+              data-testid="add-column-button"
+            >
+              + Column
+            </button>
           </div>
         </header>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div>
+          <div className="overflow-x-auto">
             <DndContext
               sensors={sensors}
               collisionDetection={collisionDetection}
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
             >
-              <section className="grid gap-6 lg:grid-cols-5">
+              <section
+                className="grid gap-4"
+                style={{
+                  gridTemplateColumns: `repeat(${board.columns.length}, minmax(220px, 1fr))`,
+                }}
+              >
                 {board.columns.map((column) => (
                   <KanbanColumn
                     key={column.id}
                     column={column}
-                    cards={column.cardIds.map((cardId) => board.cards[cardId])}
+                    cards={column.cardIds.map((cardId) => board.cards[cardId]).filter(Boolean)}
                     onRename={handleRenameColumn}
                     onAddCard={handleAddCard}
                     onDeleteCard={handleDeleteCard}
+                    onDeleteColumn={handleDeleteColumn}
+                    canDelete={board.columns.length > 1}
                   />
                 ))}
               </section>
@@ -288,7 +321,8 @@ export const KanbanBoard = ({ userId }: KanbanBoardProps) => {
             </DndContext>
           </div>
           <AISidebar
-            userId={userId}
+            boardId={boardId}
+            token={token}
             board={board}
             onBoardUpdate={handleAiBoardUpdate}
           />

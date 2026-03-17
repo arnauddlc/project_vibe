@@ -8,7 +8,7 @@ describe("AISidebar", () => {
   it("sends a prompt and applies the board update", async () => {
     const onBoardUpdate = vi.fn();
     render(
-      <AISidebar userId="user" board={initialData} onBoardUpdate={onBoardUpdate} />
+      <AISidebar boardId="board-1" token="test-token" board={initialData} onBoardUpdate={onBoardUpdate} />
     );
 
     await userEvent.type(

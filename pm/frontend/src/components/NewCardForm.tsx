@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from "react";
+import type { Priority } from "@/lib/kanban";
 
-const initialFormState = { title: "", details: "" };
+const initialFormState = { title: "", details: "", priority: "medium" as Priority };
 
 type NewCardFormProps = {
-  onAdd: (title: string, details: string) => void;
+  onAdd: (title: string, details: string, priority: Priority) => void;
 };
 
 export const NewCardForm = ({ onAdd }: NewCardFormProps) => {
@@ -15,13 +16,13 @@ export const NewCardForm = ({ onAdd }: NewCardFormProps) => {
     if (!formState.title.trim()) {
       return;
     }
-    onAdd(formState.title.trim(), formState.details.trim());
+    onAdd(formState.title.trim(), formState.details.trim(), formState.priority);
     setFormState(initialFormState);
     setIsOpen(false);
   };
 
   return (
-    <div className="mt-4">
+    <div className="mt-3">
       {isOpen ? (
         <form onSubmit={handleSubmit} className="space-y-3">
           <input
@@ -42,6 +43,18 @@ export const NewCardForm = ({ onAdd }: NewCardFormProps) => {
             rows={3}
             className="w-full resize-none rounded-xl border border-[var(--stroke)] bg-white px-3 py-2 text-sm text-[var(--gray-text)] outline-none transition focus:border-[var(--primary-blue)]"
           />
+          <select
+            value={formState.priority}
+            onChange={(event) =>
+              setFormState((prev) => ({ ...prev, priority: event.target.value as Priority }))
+            }
+            aria-label="Priority"
+            className="w-full rounded-xl border border-[var(--stroke)] bg-white px-3 py-2 text-sm font-medium text-[var(--navy-dark)] outline-none transition focus:border-[var(--primary-blue)]"
+          >
+            <option value="low">Low priority</option>
+            <option value="medium">Medium priority</option>
+            <option value="high">High priority</option>
+          </select>
           <div className="flex items-center gap-2">
             <button
               type="submit"

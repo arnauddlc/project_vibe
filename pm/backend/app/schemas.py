@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from typing import Dict, List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class Card(BaseModel):
     id: str
     title: str
     details: str
+    priority: Literal["low", "medium", "high"] = "medium"
 
     model_config = ConfigDict(extra="forbid")
 
@@ -55,3 +56,90 @@ class AIChatResponse(BaseModel):
     applied: bool
 
     model_config = ConfigDict(extra="forbid")
+
+
+# --- Auth schemas ---
+
+class UserCreate(BaseModel):
+    username: str
+    password: str
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("username")
+    @classmethod
+    def username_not_empty(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Username cannot be empty")
+        if len(v) < 2:
+            raise ValueError("Username must be at least 2 characters")
+        if len(v) > 50:
+            raise ValueError("Username must be at most 50 characters")
+        return v
+
+    @field_validator("password")
+    @classmethod
+    def password_not_empty(cls, v: str) -> str:
+        if len(v) < 4:
+            raise ValueError("Password must be at least 4 characters")
+        return v
+
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class TokenResponse(BaseModel):
+    token: str
+    user_id: str
+    username: str
+
+    model_config = ConfigDict(extra="forbid")
+
+
+# --- Board management schemas ---
+
+class BoardSummary(BaseModel):
+    id: str
+    title: str
+    card_count: int
+    created_at: str
+    updated_at: str
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class BoardCreate(BaseModel):
+    title: str
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("title")
+    @classmethod
+    def title_not_empty(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Title cannot be empty")
+        if len(v) > 100:
+            raise ValueError("Title must be at most 100 characters")
+        return v
+
+
+class BoardRename(BaseModel):
+    title: str
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("title")
+    @classmethod
+    def title_not_empty(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Title cannot be empty")
+        if len(v) > 100:
+            raise ValueError("Title must be at most 100 characters")
+        return v

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { apiFetch } from "@/lib/api";
 import { createId, type BoardData } from "@/lib/kanban";
 
 type ChatMessage = {
@@ -17,7 +18,8 @@ type AIChatResponse = {
 };
 
 type AISidebarProps = {
-  userId: string;
+  boardId: string;
+  token: string;
   board: BoardData;
   onBoardUpdate: (board: BoardData) => void;
 };
@@ -37,7 +39,7 @@ const initialMessages: ChatMessage[] = [
   },
 ];
 
-export const AISidebar = ({ userId, board, onBoardUpdate }: AISidebarProps) => {
+export const AISidebar = ({ boardId, token, board, onBoardUpdate }: AISidebarProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -73,16 +75,13 @@ export const AISidebar = ({ userId, board, onBoardUpdate }: AISidebarProps) => {
     setIsSending(true);
 
     try {
-      const response = await fetch(
-        `/api/ai/board?user_id=${encodeURIComponent(userId)}`,
+      const response = await apiFetch(
+        `/api/boards/${boardId}/ai`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            question,
-            history,
-          }),
-        }
+          body: JSON.stringify({ question, history }),
+        },
+        token
       );
 
       if (!response.ok) {
