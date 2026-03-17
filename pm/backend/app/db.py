@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS cards (
   title TEXT NOT NULL,
   details TEXT NOT NULL,
   priority TEXT NOT NULL DEFAULT 'medium',
+  due_date TEXT,
   position INTEGER NOT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
@@ -163,6 +164,8 @@ def _migrate_db(conn: sqlite3.Connection) -> None:
     card_cols = {row[1] for row in conn.execute("PRAGMA table_info(cards)").fetchall()}
     if "priority" not in card_cols:
         conn.execute("ALTER TABLE cards ADD COLUMN priority TEXT NOT NULL DEFAULT 'medium'")
+    if "due_date" not in card_cols:
+        conn.execute("ALTER TABLE cards ADD COLUMN due_date TEXT")
 
     # Create sessions table (schema already handles IF NOT EXISTS)
 
@@ -392,7 +395,7 @@ def load_board(conn: sqlite3.Connection, board_id: str) -> dict:
     for column_row in columns_rows:
         column_id = column_row["id"]
         card_rows = conn.execute(
-            "SELECT id, title, details, priority FROM cards WHERE column_id = ? ORDER BY position",
+            "SELECT id, title, details, priority, due_date FROM cards WHERE column_id = ? ORDER BY position",
             (column_id,),
         ).fetchall()
 
@@ -405,6 +408,7 @@ def load_board(conn: sqlite3.Connection, board_id: str) -> dict:
                 "title": card_row["title"],
                 "details": card_row["details"],
                 "priority": card_row["priority"],
+                "due_date": card_row["due_date"],
             }
 
         board["columns"].append(
@@ -433,13 +437,14 @@ def save_board(conn: sqlite3.Connection, board_id: str, board: dict) -> None:
         for card_index, card_id in enumerate(column["cardIds"]):
             card = board["cards"][card_id]
             conn.execute(
-                "INSERT INTO cards (id, column_id, title, details, priority, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO cards (id, column_id, title, details, priority, due_date, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     card["id"],
                     column["id"],
                     card["title"],
                     card["details"],
                     card.get("priority", "medium"),
+                    card.get("due_date"),
                     card_index,
                     now,
                     now,

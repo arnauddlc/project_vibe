@@ -141,19 +141,39 @@ export const KanbanBoard = ({ boardId, boardTitle, token, onBack }: KanbanBoardP
     }));
   };
 
-  const handleAddCard = (columnId: string, title: string, details: string, priority: Priority = "medium") => {
+  const handleAddCard = (
+    columnId: string,
+    title: string,
+    details: string,
+    priority: Priority = "medium",
+    due_date?: string | null
+  ) => {
     const id = createId("card");
     applyBoardUpdate((prev) => ({
       ...prev,
       cards: {
         ...prev.cards,
-        [id]: { id, title, details: details || "No details yet.", priority },
+        [id]: { id, title, details: details || "No details yet.", priority, due_date: due_date ?? null },
       },
       columns: prev.columns.map((column) =>
         column.id === columnId
           ? { ...column, cardIds: [...column.cardIds, id] }
           : column
       ),
+    }));
+  };
+
+  const handleEditCard = (
+    _columnId: string,
+    cardId: string,
+    updates: Partial<Omit<import("@/lib/kanban").Card, "id">>
+  ) => {
+    applyBoardUpdate((prev) => ({
+      ...prev,
+      cards: {
+        ...prev.cards,
+        [cardId]: { ...prev.cards[cardId], ...updates },
+      },
     }));
   };
 
@@ -306,6 +326,7 @@ export const KanbanBoard = ({ boardId, boardTitle, token, onBack }: KanbanBoardP
                     onRename={handleRenameColumn}
                     onAddCard={handleAddCard}
                     onDeleteCard={handleDeleteCard}
+                    onEditCard={handleEditCard}
                     onDeleteColumn={handleDeleteColumn}
                     canDelete={board.columns.length > 1}
                   />

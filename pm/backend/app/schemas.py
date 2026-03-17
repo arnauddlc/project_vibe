@@ -10,6 +10,7 @@ class Card(BaseModel):
     title: str
     details: str
     priority: Literal["low", "medium", "high"] = "medium"
+    due_date: Optional[str] = None
 
     model_config = ConfigDict(extra="forbid")
 

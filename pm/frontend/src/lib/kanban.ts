@@ -5,6 +5,7 @@ export type Card = {
   title: string;
   details: string;
   priority: Priority;
+  due_date?: string | null;
 };
 
 export type Column = {
@@ -36,12 +37,14 @@ export const initialData: BoardData = {
       title: "Align roadmap themes",
       details: "Draft quarterly themes with impact statements and metrics.",
       priority: "high",
+      due_date: "2026-03-20",
     },
     "card-2": {
       id: "card-2",
       title: "Gather customer signals",
       details: "Review support tags, sales notes, and churn feedback.",
       priority: "medium",
+      due_date: "2026-04-01",
     },
     "card-3": {
       id: "card-3",

@@ -97,4 +97,33 @@ describe("KanbanBoard", () => {
     const newCard = within(column).getByText("Priority card");
     expect(newCard).toBeInTheDocument();
   });
+
+  it("shows due date badge on cards with due dates", async () => {
+    render(<KanbanBoard {...boardProps} />);
+    await screen.findAllByTestId(/^column-col-/);
+    // card-1 in initialData has due_date set
+    const dueBadge = screen.getByTestId("due-date-card-1");
+    expect(dueBadge).toBeInTheDocument();
+  });
+
+  it("opens edit form when edit button is clicked", async () => {
+    render(<KanbanBoard {...boardProps} />);
+    await screen.findAllByTestId(/^column-col-/);
+    const editBtn = screen.getByTestId("edit-card-card-1");
+    await userEvent.click(editBtn);
+    expect(screen.getByTestId("edit-title-card-1")).toBeInTheDocument();
+  });
+
+  it("saves edited card title", async () => {
+    render(<KanbanBoard {...boardProps} />);
+    await screen.findAllByTestId(/^column-col-/);
+    await userEvent.click(screen.getByTestId("edit-card-card-1"));
+
+    const titleInput = screen.getByTestId("edit-title-card-1");
+    await userEvent.clear(titleInput);
+    await userEvent.type(titleInput, "Updated Title");
+    await userEvent.click(screen.getByTestId("save-edit-card-1"));
+
+    expect(await screen.findByText("Updated Title")).toBeInTheDocument();
+  });
 });

@@ -264,3 +264,53 @@ def test_card_priority_validation(client, auth):
     board["columns"][0]["cardIds"].append("bad-priority")
     response = client.put(f"/api/boards/{board_id}", headers=auth["headers"], json=board)
     assert response.status_code == 422
+
+
+def test_card_due_date_persists(client, auth):
+    boards = client.get("/api/boards", headers=auth["headers"]).json()
+    board_id = boards[0]["id"]
+    board = client.get(f"/api/boards/{board_id}", headers=auth["headers"]).json()
+
+    board["cards"]["due-card"] = {
+        "id": "due-card",
+        "title": "Deadline task",
+        "details": "Must finish by date",
+        "due_date": "2026-04-01",
+    }
+    board["columns"][0]["cardIds"].append("due-card")
+    client.put(f"/api/boards/{board_id}", headers=auth["headers"], json=board)
+
+    refreshed = client.get(f"/api/boards/{board_id}", headers=auth["headers"]).json()
+    assert refreshed["cards"]["due-card"]["due_date"] == "2026-04-01"
+
+
+def test_card_due_date_defaults_to_none(client, auth):
+    boards = client.get("/api/boards", headers=auth["headers"]).json()
+    board_id = boards[0]["id"]
+    board = client.get(f"/api/boards/{board_id}", headers=auth["headers"]).json()
+
+    first_card_id = list(board["cards"].keys())[0]
+    assert board["cards"][first_card_id]["due_date"] is None
+
+
+def test_card_due_date_can_be_cleared(client, auth):
+    boards = client.get("/api/boards", headers=auth["headers"]).json()
+    board_id = boards[0]["id"]
+    board = client.get(f"/api/boards/{board_id}", headers=auth["headers"]).json()
+
+    board["cards"]["due-clear"] = {
+        "id": "due-clear",
+        "title": "Task with date",
+        "details": "Has a due date",
+        "due_date": "2026-03-20",
+    }
+    board["columns"][0]["cardIds"].append("due-clear")
+    client.put(f"/api/boards/{board_id}", headers=auth["headers"], json=board)
+
+    # Clear the due date
+    board2 = client.get(f"/api/boards/{board_id}", headers=auth["headers"]).json()
+    board2["cards"]["due-clear"]["due_date"] = None
+    client.put(f"/api/boards/{board_id}", headers=auth["headers"], json=board2)
+
+    refreshed = client.get(f"/api/boards/{board_id}", headers=auth["headers"]).json()
+    assert refreshed["cards"]["due-clear"]["due_date"] is None
