@@ -136,7 +136,7 @@ Standard Next.js ESLint config with core-web-vitals and TypeScript plugins. No i
 ### 3.5 `.env`
 
 ```
-OPENROUTER_API_KEY=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
+OPENROUTER_API_KEY=#######
 ```
 
 | Finding | Severity | Detail |
