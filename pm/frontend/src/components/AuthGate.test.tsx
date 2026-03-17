@@ -9,10 +9,6 @@ const fillLoginForm = async (username: string, password: string) => {
 };
 
 describe("AuthGate", () => {
-  beforeEach(() => {
-    window.localStorage.clear();
-  });
-
   it("renders the login form", () => {
     render(<AuthGate />);
     expect(screen.getByTestId("login-form")).toBeInTheDocument();

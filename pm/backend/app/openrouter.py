@@ -8,7 +8,7 @@ import httpx
 from fastapi import HTTPException
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-MODEL = "openrouter/free"
+MODEL = "openai/gpt-oss-120b"
 
 
 def _get_api_key() -> str:

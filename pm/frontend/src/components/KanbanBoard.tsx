@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -52,7 +52,7 @@ export const KanbanBoard = ({ userId }: KanbanBoardProps) => {
 
   const cardsById = useMemo(() => board?.cards ?? {}, [board]);
 
-  const fetchBoard = async () => {
+  const fetchBoard = useCallback(async () => {
     setStatus((prev) => ({ ...prev, isLoading: true, errorMessage: null }));
     try {
       const response = await fetch(
@@ -72,7 +72,7 @@ export const KanbanBoard = ({ userId }: KanbanBoardProps) => {
     } finally {
       setStatus((prev) => ({ ...prev, isLoading: false }));
     }
-  };
+  }, [userId]);
 
   const persistBoard = async (nextBoard: BoardData) => {
     setStatus((prev) => ({ ...prev, isSaving: true, errorMessage: null }));
@@ -102,14 +102,10 @@ export const KanbanBoard = ({ userId }: KanbanBoardProps) => {
   };
 
   const applyBoardUpdate = (updater: (current: BoardData) => BoardData) => {
-    setBoard((prev) => {
-      if (!prev) {
-        return prev;
-      }
-      const next = updater(prev);
-      void persistBoard(next);
-      return next;
-    });
+    if (!board) return;
+    const next = updater(board);
+    setBoard(next);
+    void persistBoard(next);
   };
 
   useEffect(() => {
@@ -117,7 +113,7 @@ export const KanbanBoard = ({ userId }: KanbanBoardProps) => {
       return;
     }
     void fetchBoard();
-  }, [userId]);
+  }, [userId, fetchBoard]);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveCardId(event.active.id as string);

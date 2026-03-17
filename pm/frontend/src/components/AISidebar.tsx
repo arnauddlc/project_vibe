@@ -24,7 +24,7 @@ type AISidebarProps = {
 
 const starterPrompts = [
   "Add a high-priority QA card to Review.",
-  "Move “Gather customer signals” to Discovery.",
+  'Move "Gather customer signals" to Discovery.',
   "Rename the Backlog column to Intake.",
 ];
 

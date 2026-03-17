@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -113,13 +114,21 @@ def get_db_path() -> str:
     return os.getenv(DB_ENV_VAR, DEFAULT_DB_PATH)
 
 
-def connect() -> sqlite3.Connection:
+@contextmanager
+def connect():
     db_path = get_db_path()
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def init_db() -> None:

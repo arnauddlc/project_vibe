@@ -1,4 +1,5 @@
 import json
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
@@ -13,18 +14,20 @@ from app.db import (
     load_board,
     save_board,
 )
-from app.openrouter import MODEL, call_openrouter, call_openrouter_structured
+from app.openrouter import call_openrouter_structured
 from app.schemas import AIChatRequest, AIChatResponse, AIResponse, BoardData
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = BASE_DIR / "static"
 
-app = FastAPI()
 
-
-@app.on_event("startup")
-def startup() -> None:
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     init_db()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/api/health")
@@ -118,13 +121,6 @@ def ai_board(request: AIChatRequest, user_id: str = Query(..., min_length=1)):
         board=BoardData(**updated_board) if updated_board else None,
         applied=applied,
     )
-
-
-@app.get("/api/ai/test")
-def ai_test():
-    prompt = "What is 2+2?"
-    response = call_openrouter(prompt)
-    return {"model": MODEL, "prompt": prompt, "response": response}
 
 
 app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
