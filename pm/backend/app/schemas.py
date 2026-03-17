@@ -94,6 +94,20 @@ class UserLogin(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("new_password")
+    @classmethod
+    def new_password_length(cls, v: str) -> str:
+        if len(v) < 4:
+            raise ValueError("New password must be at least 4 characters")
+        return v
+
+
 class TokenResponse(BaseModel):
     token: str
     user_id: str
@@ -107,9 +121,16 @@ class TokenResponse(BaseModel):
 class BoardSummary(BaseModel):
     id: str
     title: str
+    description: str
     card_count: int
     created_at: str
     updated_at: str
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class BoardDescription(BaseModel):
+    description: str
 
     model_config = ConfigDict(extra="forbid")
 

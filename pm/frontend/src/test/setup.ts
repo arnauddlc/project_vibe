@@ -56,6 +56,11 @@ const matchBoardAI = (pathname: string): string | null => {
   return m ? m[1] : null;
 };
 
+const matchBoardDescription = (pathname: string): string | null => {
+  const m = pathname.match(/^\/api\/boards\/([^/]+)\/description$/);
+  return m ? m[1] : null;
+};
+
 const makeResponse = (body: unknown, status = 200): Response =>
   ({
     ok: status >= 200 && status < 300,
@@ -81,6 +86,7 @@ const resetStores = () => {
   boardMetas.set(SEED_BOARD_ID, {
     id: SEED_BOARD_ID,
     title: "My First Board",
+    description: "",
     card_count: Object.keys(initialData.cards).length,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -118,6 +124,7 @@ vi.stubGlobal(
       boardMetas.set(boardId, {
         id: boardId,
         title: "My First Board",
+        description: "",
         card_count: Object.keys(initialData.cards).length,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -144,6 +151,18 @@ vi.stubGlobal(
 
     if (pathname === "/api/auth/logout" && method === "POST") {
       if (token) sessions.delete(token);
+      return makeResponse(null, 204);
+    }
+
+    if (pathname === "/api/auth/password" && method === "PATCH") {
+      if (!token || !sessions.has(token)) return makeResponse({ detail: "Unauthorized" }, 401);
+      const sess = sessions.get(token)!;
+      const body = JSON.parse(init?.body as string) as { current_password: string; new_password: string };
+      const user = users.get(sess.username);
+      if (!user || user.password !== body.current_password) {
+        return makeResponse({ detail: "Current password is incorrect" }, 400);
+      }
+      users.set(sess.username, { ...user, password: body.new_password });
       return makeResponse(null, 204);
     }
 
@@ -179,6 +198,7 @@ vi.stubGlobal(
       const meta: BoardSummary = {
         id: newBoardId,
         title: body.title,
+        description: "",
         card_count: Object.keys(initialData.cards).length,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -228,6 +248,17 @@ vi.stubGlobal(
         boardMetas.delete(boardId);
         return existed ? makeResponse(null, 204) : makeResponse({ detail: "Not found" }, 404);
       }
+    }
+
+    // --- Board description endpoint ---
+    const descBoardId = matchBoardDescription(pathname);
+    if (descBoardId && method === "PUT") {
+      const meta = boardMetas.get(descBoardId);
+      if (!meta) return makeResponse({ detail: "Board not found" }, 404);
+      const body = JSON.parse(init?.body as string) as { description: string };
+      const updated = { ...meta, description: body.description };
+      boardMetas.set(descBoardId, updated);
+      return makeResponse(updated);
     }
 
     // --- AI endpoint ---

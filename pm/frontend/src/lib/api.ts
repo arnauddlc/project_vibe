@@ -1,6 +1,7 @@
 export type BoardSummary = {
   id: string;
   title: string;
+  description: string;
   card_count: number;
   created_at: string;
   updated_at: string;
@@ -117,4 +118,34 @@ export const renameBoard = async (
   );
   if (!response.ok) throw new Error("Failed to rename board");
   return response.json() as Promise<BoardSummary>;
+};
+
+export const updateBoardDescription = async (
+  token: string,
+  boardId: string,
+  description: string
+): Promise<BoardSummary> => {
+  const response = await apiFetch(
+    `/api/boards/${boardId}/description`,
+    { method: "PUT", body: JSON.stringify({ description }) },
+    token
+  );
+  if (!response.ok) throw new Error("Failed to update description");
+  return response.json() as Promise<BoardSummary>;
+};
+
+export const changePassword = async (
+  token: string,
+  currentPassword: string,
+  newPassword: string
+): Promise<void> => {
+  const response = await apiFetch(
+    "/api/auth/password",
+    { method: "PATCH", body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }) },
+    token
+  );
+  if (!response.ok) {
+    const data = (await response.json()) as { detail?: string };
+    throw new Error(data.detail ?? "Failed to change password");
+  }
 };

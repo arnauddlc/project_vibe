@@ -114,6 +114,17 @@ describe("KanbanBoard", () => {
     expect(screen.getByTestId("edit-title-card-1")).toBeInTheDocument();
   });
 
+  it("moves a column left", async () => {
+    render(<KanbanBoard {...boardProps} />);
+    const columns = await screen.findAllByTestId(/^column-col-/);
+    const secondColumnId = columns[1].getAttribute("data-testid")?.replace("column-", "");
+    const moveLeftBtn = within(columns[1]).getByTestId(`move-column-left-${secondColumnId}`);
+    const secondTitle = within(columns[1]).getByLabelText("Column title").getAttribute("value") ?? "";
+    await userEvent.click(moveLeftBtn);
+    const updatedColumns = screen.getAllByTestId(/^column-col-/);
+    expect(within(updatedColumns[0]).getByLabelText("Column title")).toHaveValue(secondTitle);
+  });
+
   it("saves edited card title", async () => {
     render(<KanbanBoard {...boardProps} />);
     await screen.findAllByTestId(/^column-col-/);

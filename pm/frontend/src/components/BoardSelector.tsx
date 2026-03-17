@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import {
+  changePassword,
   createBoard,
   deleteBoard,
   fetchBoards,
   renameBoard,
+  updateBoardDescription,
   type BoardSummary,
 } from "@/lib/api";
 
@@ -84,6 +86,14 @@ export const BoardSelector = ({ token, username, onLogout }: BoardSelectorProps)
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [editingDescriptionId, setEditingDescriptionId] = useState<string | null>(null);
+  const [descriptionValue, setDescriptionValue] = useState("");
 
   const loadBoards = useCallback(async () => {
     setIsLoading(true);
@@ -140,6 +150,35 @@ export const BoardSelector = ({ token, username, onLogout }: BoardSelectorProps)
     }
   };
 
+  const handleChangePassword = async () => {
+    setPasswordError(null);
+    setIsChangingPassword(true);
+    try {
+      await changePassword(token, currentPassword, newPassword);
+      setPasswordSuccess(true);
+      setCurrentPassword("");
+      setNewPassword("");
+      setTimeout(() => {
+        setShowPasswordForm(false);
+        setPasswordSuccess(false);
+      }, 1500);
+    } catch (error) {
+      setPasswordError(error instanceof Error ? error.message : "Failed to change password");
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const handleSaveDescription = async (boardId: string) => {
+    try {
+      const updated = await updateBoardDescription(token, boardId, descriptionValue);
+      setBoards((prev) => prev.map((b) => (b.id === boardId ? updated : b)));
+      setEditingDescriptionId(null);
+    } catch {
+      setErrorMessage("Failed to update description");
+    }
+  };
+
   const handleBoardBack = useCallback(async () => {
     setSelectedBoard(null);
     await loadBoards();
@@ -180,6 +219,18 @@ export const BoardSelector = ({ token, username, onLogout }: BoardSelectorProps)
             </div>
             <button
               type="button"
+              onClick={() => {
+                setShowPasswordForm((v) => !v);
+                setPasswordError(null);
+                setPasswordSuccess(false);
+              }}
+              className="rounded-full border border-[var(--stroke)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--gray-text)] transition hover:text-[var(--navy-dark)]"
+              data-testid="change-password-button"
+            >
+              Password
+            </button>
+            <button
+              type="button"
               onClick={onLogout}
               className="rounded-full border border-[var(--stroke)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--gray-text)] transition hover:text-[var(--navy-dark)]"
               data-testid="logout-button"
@@ -188,6 +239,57 @@ export const BoardSelector = ({ token, username, onLogout }: BoardSelectorProps)
             </button>
           </div>
         </header>
+
+        {showPasswordForm ? (
+          <div className="rounded-2xl border border-[var(--stroke)] bg-white/90 p-5 shadow-[var(--shadow)]" data-testid="password-form">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--navy-dark)]">Change Password</p>
+            {passwordSuccess ? (
+              <p className="text-xs font-semibold text-[var(--primary-blue)]" data-testid="password-success">
+                Password changed successfully.
+              </p>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Current password"
+                  className="min-w-0 flex-1 rounded-xl border border-[var(--stroke)] bg-white px-4 py-2 text-sm font-medium text-[var(--navy-dark)] outline-none transition focus:border-[var(--primary-blue)]"
+                  data-testid="current-password-input"
+                />
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="New password"
+                  className="min-w-0 flex-1 rounded-xl border border-[var(--stroke)] bg-white px-4 py-2 text-sm font-medium text-[var(--navy-dark)] outline-none transition focus:border-[var(--primary-blue)]"
+                  data-testid="new-password-input"
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleChangePassword()}
+                  disabled={isChangingPassword || !currentPassword || !newPassword}
+                  className="rounded-full bg-[var(--primary-blue)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:brightness-110 disabled:opacity-60"
+                  data-testid="change-password-submit"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordForm(false)}
+                  className="rounded-full border border-[var(--stroke)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--gray-text)] transition hover:text-[var(--navy-dark)]"
+                >
+                  Cancel
+                </button>
+                {passwordError ? (
+                  <p className="w-full text-xs font-medium text-[var(--secondary-purple)]" data-testid="password-error">
+                    {passwordError}
+                  </p>
+                ) : null}
+              </div>
+            )}
+          </div>
+        ) : null}
 
         {errorMessage ? (
           <div className="rounded-xl border border-[rgba(117,57,145,0.35)] bg-[rgba(117,57,145,0.08)] px-4 py-3 text-sm font-medium text-[var(--secondary-purple)]">
@@ -296,19 +398,58 @@ export const BoardSelector = ({ token, username, onLogout }: BoardSelectorProps)
                       </div>
                     ) : (
                       <>
-                        <button
-                          type="button"
-                          className="w-full text-left"
-                          onClick={() => setSelectedBoard(board)}
-                          data-testid={`open-board-${board.id}`}
-                        >
-                          <p className="font-display text-lg font-semibold text-[var(--navy-dark)]">
-                            {board.title}
-                          </p>
-                          <p className="mt-1 text-xs text-[var(--gray-text)]">
-                            {board.card_count} {board.card_count === 1 ? "card" : "cards"}
-                          </p>
-                        </button>
+                        {editingDescriptionId === board.id ? (
+                          <div className="flex flex-col gap-2">
+                            <p className="font-display text-lg font-semibold text-[var(--navy-dark)]">
+                              {board.title}
+                            </p>
+                            <textarea
+                              value={descriptionValue}
+                              onChange={(e) => setDescriptionValue(e.target.value)}
+                              placeholder="Add a description..."
+                              rows={2}
+                              className="w-full resize-none rounded-xl border border-[var(--stroke)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--navy-dark)] outline-none transition focus:border-[var(--primary-blue)]"
+                              data-testid={`description-input-${board.id}`}
+                              autoFocus
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => void handleSaveDescription(board.id)}
+                                className="rounded-full bg-[var(--primary-blue)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-white"
+                                data-testid={`save-description-${board.id}`}
+                              >
+                                Save
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingDescriptionId(null)}
+                                className="rounded-full border border-[var(--stroke)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--gray-text)]"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            className="w-full text-left"
+                            onClick={() => setSelectedBoard(board)}
+                            data-testid={`open-board-${board.id}`}
+                          >
+                            <p className="font-display text-lg font-semibold text-[var(--navy-dark)]">
+                              {board.title}
+                            </p>
+                            {board.description ? (
+                              <p className="mt-1 text-xs text-[var(--gray-text)]" data-testid={`description-${board.id}`}>
+                                {board.description}
+                              </p>
+                            ) : null}
+                            <p className="mt-1 text-xs text-[var(--gray-text)]">
+                              {board.card_count} {board.card_count === 1 ? "card" : "cards"}
+                            </p>
+                          </button>
+                        )}
                         <div className="absolute right-4 top-4 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                           {confirmDeleteId === board.id ? (
                             <>
@@ -330,6 +471,18 @@ export const BoardSelector = ({ token, username, onLogout }: BoardSelectorProps)
                             </>
                           ) : (
                             <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingDescriptionId(board.id);
+                                  setDescriptionValue(board.description);
+                                }}
+                                className="rounded-full border border-[var(--stroke)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--gray-text)] transition hover:text-[var(--navy-dark)]"
+                                aria-label={`Edit description for ${board.title}`}
+                                data-testid={`edit-description-${board.id}`}
+                              >
+                                Desc
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => {

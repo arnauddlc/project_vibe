@@ -53,6 +53,51 @@ describe("BoardSelector", () => {
     expect(await screen.findByTestId("back-button")).toBeInTheDocument();
   });
 
+  it("changes password successfully", async () => {
+    render(<BoardSelector {...selectorProps} />);
+    await screen.findByTestId("boards-list");
+
+    await userEvent.click(screen.getByTestId("change-password-button"));
+    expect(screen.getByTestId("password-form")).toBeInTheDocument();
+
+    await userEvent.type(screen.getByTestId("current-password-input"), "password");
+    await userEvent.type(screen.getByTestId("new-password-input"), "newpass99");
+    await userEvent.click(screen.getByTestId("change-password-submit"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("password-success")).toBeInTheDocument();
+    });
+  });
+
+  it("shows error when current password is wrong", async () => {
+    render(<BoardSelector {...selectorProps} />);
+    await screen.findByTestId("boards-list");
+
+    await userEvent.click(screen.getByTestId("change-password-button"));
+    await userEvent.type(screen.getByTestId("current-password-input"), "wrongpass");
+    await userEvent.type(screen.getByTestId("new-password-input"), "newpass99");
+    await userEvent.click(screen.getByTestId("change-password-submit"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("password-error")).toBeInTheDocument();
+    });
+  });
+
+  it("edits and saves board description", async () => {
+    render(<BoardSelector {...selectorProps} />);
+    await screen.findByTestId("boards-list");
+
+    await userEvent.click(screen.getByTestId("edit-description-board-1"));
+    const input = screen.getByTestId("description-input-board-1");
+    await userEvent.clear(input);
+    await userEvent.type(input, "Q2 features board");
+    await userEvent.click(screen.getByTestId("save-description-board-1"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("description-board-1")).toHaveTextContent("Q2 features board");
+    });
+  });
+
   it("navigates back from board to selector", async () => {
     render(<BoardSelector {...selectorProps} />);
     await screen.findByTestId("boards-list");

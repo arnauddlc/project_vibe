@@ -18,6 +18,7 @@ from app.db import (
     delete_board_for_user,
     delete_session,
     get_board_for_user,
+    get_board_description,
     get_or_create_board,
     get_or_create_user,
     get_user_from_token,
@@ -27,6 +28,8 @@ from app.db import (
     load_board,
     rename_board,
     save_board,
+    set_board_description,
+    update_password,
 )
 from app.openrouter import call_openrouter_structured
 from app.schemas import (
@@ -35,8 +38,10 @@ from app.schemas import (
     AIResponse,
     BoardCreate,
     BoardData,
+    BoardDescription,
     BoardRename,
     BoardSummary,
+    PasswordChange,
     TokenResponse,
     UserCreate,
     UserLogin,
@@ -120,6 +125,22 @@ def logout(authorization: Optional[str] = Header(None)):
     return Response(status_code=204)
 
 
+@app.patch("/api/auth/password", status_code=204)
+def change_password(body: PasswordChange, user_id: str = Depends(get_current_user)):
+    with connect() as conn:
+        user_row = conn.execute(
+            "SELECT username FROM users WHERE id = ?", (user_id,)
+        ).fetchone()
+        if not user_row:
+            raise HTTPException(status_code=404, detail="User not found")
+        username = user_row["username"]
+        verified_id = authenticate_user(conn, username, body.current_password)
+        if not verified_id:
+            raise HTTPException(status_code=400, detail="Current password is incorrect")
+        update_password(conn, user_id, body.new_password)
+    return Response(status_code=204)
+
+
 # --- Board management endpoints ---
 
 @app.get("/api/boards", response_model=List[BoardSummary])
@@ -154,6 +175,19 @@ def delete_board(board_id: str, user_id: str = Depends(get_current_user)):
 def update_board(board_id: str, body: BoardRename, user_id: str = Depends(get_current_user)) -> BoardSummary:
     with connect() as conn:
         updated = rename_board(conn, board_id, user_id, body.title)
+        if not updated:
+            raise HTTPException(status_code=404, detail="Board not found")
+        boards = list_boards(conn, user_id)
+    board = next((b for b in boards if b["id"] == board_id), None)
+    if not board:
+        raise HTTPException(status_code=404, detail="Board not found")
+    return BoardSummary(**board)
+
+
+@app.put("/api/boards/{board_id}/description", response_model=BoardSummary)
+def update_board_description(board_id: str, body: BoardDescription, user_id: str = Depends(get_current_user)) -> BoardSummary:
+    with connect() as conn:
+        updated = set_board_description(conn, board_id, user_id, body.description)
         if not updated:
             raise HTTPException(status_code=404, detail="Board not found")
         boards = list_boards(conn, user_id)

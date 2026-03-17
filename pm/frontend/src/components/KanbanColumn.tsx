@@ -15,6 +15,9 @@ type KanbanColumnProps = {
   onDeleteCard: (columnId: string, cardId: string) => void;
   onEditCard: (columnId: string, cardId: string, updates: Partial<Omit<Card, "id">>) => void;
   onDeleteColumn: (columnId: string) => void;
+  onMoveColumn: (columnId: string, direction: "left" | "right") => void;
+  canMoveLeft: boolean;
+  canMoveRight: boolean;
   canDelete: boolean;
 };
 
@@ -36,6 +39,18 @@ const XIcon = () => (
   </svg>
 );
 
+const ChevronLeftIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="15 18 9 12 15 6" />
+  </svg>
+);
+
+const ChevronRightIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+);
+
 export const KanbanColumn = ({
   column,
   cards,
@@ -45,6 +60,9 @@ export const KanbanColumn = ({
   onDeleteCard,
   onEditCard,
   onDeleteColumn,
+  onMoveColumn,
+  canMoveLeft,
+  canMoveRight,
   canDelete,
 }: KanbanColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
@@ -69,6 +87,28 @@ export const KanbanColumn = ({
         <span className="flex-shrink-0 rounded-full bg-[var(--surface)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--gray-text)]">
           {cards.length}
         </span>
+        {canMoveLeft ? (
+          <button
+            type="button"
+            onClick={() => onMoveColumn(column.id, "left")}
+            className="flex-shrink-0 rounded-full p-1 text-[var(--gray-text)] transition hover:bg-[var(--surface)] hover:text-[var(--navy-dark)]"
+            aria-label={`Move column ${column.title} left`}
+            data-testid={`move-column-left-${column.id}`}
+          >
+            <ChevronLeftIcon />
+          </button>
+        ) : null}
+        {canMoveRight ? (
+          <button
+            type="button"
+            onClick={() => onMoveColumn(column.id, "right")}
+            className="flex-shrink-0 rounded-full p-1 text-[var(--gray-text)] transition hover:bg-[var(--surface)] hover:text-[var(--navy-dark)]"
+            aria-label={`Move column ${column.title} right`}
+            data-testid={`move-column-right-${column.id}`}
+          >
+            <ChevronRightIcon />
+          </button>
+        ) : null}
         {canDelete ? (
           <button
             type="button"

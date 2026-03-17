@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS boards (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -168,6 +169,11 @@ def _migrate_db(conn: sqlite3.Connection) -> None:
     if "due_date" not in card_cols:
         conn.execute("ALTER TABLE cards ADD COLUMN due_date TEXT")
 
+    # Add description column to boards if missing
+    board_cols = {row[1] for row in conn.execute("PRAGMA table_info(boards)").fetchall()}
+    if "description" not in board_cols:
+        conn.execute("ALTER TABLE boards ADD COLUMN description TEXT NOT NULL DEFAULT ''")
+
     # Add expires_at to sessions if missing
     session_cols = {row[1] for row in conn.execute("PRAGMA table_info(sessions)").fetchall()}
     if "expires_at" not in session_cols:
@@ -242,6 +248,14 @@ def create_user_with_password(conn: sqlite3.Connection, username: str, password:
     return user_id
 
 
+def update_password(conn: sqlite3.Connection, user_id: str, new_password: str) -> None:
+    """Update the hashed password for a user."""
+    conn.execute(
+        "UPDATE users SET password_hash = ? WHERE id = ?",
+        (hash_password(new_password), user_id),
+    )
+
+
 def authenticate_user(conn: sqlite3.Connection, username: str, password: str) -> str | None:
     """Validate credentials. Returns user_id if valid, None otherwise."""
     row = conn.execute(
@@ -292,7 +306,7 @@ def delete_session(conn: sqlite3.Connection, token: str) -> None:
 def list_boards(conn: sqlite3.Connection, user_id: str) -> list[dict]:
     rows = conn.execute(
         """
-        SELECT b.id, b.title, b.created_at, b.updated_at,
+        SELECT b.id, b.title, b.description, b.created_at, b.updated_at,
                (SELECT COUNT(*)
                 FROM columns c
                 JOIN cards ca ON ca.column_id = c.id
@@ -304,6 +318,23 @@ def list_boards(conn: sqlite3.Connection, user_id: str) -> list[dict]:
         (user_id,),
     ).fetchall()
     return [dict(row) for row in rows]
+
+
+def get_board_description(conn: sqlite3.Connection, board_id: str, user_id: str) -> str | None:
+    """Returns the board description if the board belongs to the user, else None."""
+    row = conn.execute(
+        "SELECT description FROM boards WHERE id = ? AND user_id = ?", (board_id, user_id)
+    ).fetchone()
+    return row["description"] if row else None
+
+
+def set_board_description(conn: sqlite3.Connection, board_id: str, user_id: str, description: str) -> bool:
+    """Update description. Returns True if updated."""
+    result = conn.execute(
+        "UPDATE boards SET description = ?, updated_at = ? WHERE id = ? AND user_id = ?",
+        (description, utc_now(), board_id, user_id),
+    )
+    return result.rowcount > 0
 
 
 def get_board_for_user(conn: sqlite3.Connection, board_id: str, user_id: str) -> bool:

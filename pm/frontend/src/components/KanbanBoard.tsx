@@ -221,6 +221,18 @@ export const KanbanBoard = ({ boardId, boardTitle, token, onBack }: KanbanBoardP
     }));
   };
 
+  const handleMoveColumn = (columnId: string, direction: "left" | "right") => {
+    applyBoardUpdate((prev) => {
+      const index = prev.columns.findIndex((c) => c.id === columnId);
+      if (index === -1) return prev;
+      const newIndex = direction === "left" ? index - 1 : index + 1;
+      if (newIndex < 0 || newIndex >= prev.columns.length) return prev;
+      const columns = [...prev.columns];
+      [columns[index], columns[newIndex]] = [columns[newIndex], columns[index]];
+      return { ...prev, columns };
+    });
+  };
+
   const handleDeleteColumn = (columnId: string) => {
     applyBoardUpdate((prev) => {
       const column = prev.columns.find((c) => c.id === columnId);
@@ -343,6 +355,9 @@ export const KanbanBoard = ({ boardId, boardTitle, token, onBack }: KanbanBoardP
                     onDeleteCard={handleDeleteCard}
                     onEditCard={handleEditCard}
                     onDeleteColumn={handleDeleteColumn}
+                    onMoveColumn={handleMoveColumn}
+                    canMoveLeft={board.columns.findIndex((c) => c.id === column.id) > 0}
+                    canMoveRight={board.columns.findIndex((c) => c.id === column.id) < board.columns.length - 1}
                     canDelete={board.columns.length > 1}
                   />
                 ))}
