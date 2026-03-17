@@ -242,6 +242,8 @@ vi.stubGlobal(
           id: cardId,
           title: "AI planned follow-up",
           details: "Added via AI suggestion.",
+          priority: "medium",
+          due_date: null,
         };
         updated.columns[0].cardIds.push(cardId);
       }

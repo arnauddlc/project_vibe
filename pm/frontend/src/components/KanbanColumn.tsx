@@ -9,6 +9,7 @@ import { NewCardForm } from "@/components/NewCardForm";
 type KanbanColumnProps = {
   column: Column;
   cards: Card[];
+  matchesFilter: (cardId: string) => boolean;
   onRename: (columnId: string, title: string) => void;
   onAddCard: (columnId: string, title: string, details: string, priority: Priority, due_date?: string | null) => void;
   onDeleteCard: (columnId: string, cardId: string) => void;
@@ -38,6 +39,7 @@ const XIcon = () => (
 export const KanbanColumn = ({
   column,
   cards,
+  matchesFilter,
   onRename,
   onAddCard,
   onDeleteCard,
@@ -82,12 +84,16 @@ export const KanbanColumn = ({
       <div className="mt-1 flex flex-1 flex-col gap-2">
         <SortableContext items={column.cardIds} strategy={verticalListSortingStrategy}>
           {cards.map((card) => (
-            <KanbanCard
+            <div
               key={card.id}
-              card={card}
-              onDelete={(cardId) => onDeleteCard(column.id, cardId)}
-              onEdit={(cardId, updates) => onEditCard(column.id, cardId, updates)}
-            />
+              className={matchesFilter(card.id) ? undefined : "opacity-30 pointer-events-none"}
+            >
+              <KanbanCard
+                card={card}
+                onDelete={(cardId) => onDeleteCard(column.id, cardId)}
+                onEdit={(cardId, updates) => onEditCard(column.id, cardId, updates)}
+              />
+            </div>
           ))}
         </SortableContext>
         {cards.length === 0 && (

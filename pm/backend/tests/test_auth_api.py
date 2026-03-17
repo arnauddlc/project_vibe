@@ -106,3 +106,32 @@ def test_protected_endpoint_without_token_returns_401(client):
 def test_protected_endpoint_with_invalid_token_returns_401(client):
     response = client.get("/api/boards", headers={"Authorization": "Bearer bad-token"})
     assert response.status_code == 401
+
+
+def test_expired_session_returns_401(client, monkeypatch):
+    """Sessions whose expires_at is in the past should be rejected."""
+    from datetime import datetime, timedelta, timezone
+    from app import db as app_db
+
+    reg = client.post(
+        "/api/auth/register", json={"username": "alice", "password": "secret"}
+    )
+    token = reg.json()["token"]
+    auth = {"Authorization": f"Bearer {token}"}
+
+    # Confirm session is valid
+    assert client.get("/api/boards", headers=auth).status_code == 200
+
+    # Backdate the session expiry directly in the DB
+    past = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    with app_db.connect() as conn:
+        conn.execute("UPDATE sessions SET expires_at = ? WHERE id = ?", (past, token))
+
+    assert client.get("/api/boards", headers=auth).status_code == 401
+
+
+def test_fresh_login_creates_new_valid_session(client):
+    client.post("/api/auth/register", json={"username": "alice", "password": "secret"})
+    resp = client.post("/api/auth/login", json={"username": "alice", "password": "secret"})
+    token = resp.json()["token"]
+    assert client.get("/api/boards", headers={"Authorization": f"Bearer {token}"}).status_code == 200

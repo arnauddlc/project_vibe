@@ -5,7 +5,7 @@ import os
 import secrets
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 DB_ENV_VAR = "DATABASE_PATH"
@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
   FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -160,12 +161,20 @@ def _migrate_db(conn: sqlite3.Connection) -> None:
     if "password_hash" not in cols:
         conn.execute("ALTER TABLE users ADD COLUMN password_hash TEXT")
 
-    # Add priority column to cards if missing
+    # Add priority and due_date columns to cards if missing
     card_cols = {row[1] for row in conn.execute("PRAGMA table_info(cards)").fetchall()}
     if "priority" not in card_cols:
         conn.execute("ALTER TABLE cards ADD COLUMN priority TEXT NOT NULL DEFAULT 'medium'")
     if "due_date" not in card_cols:
         conn.execute("ALTER TABLE cards ADD COLUMN due_date TEXT")
+
+    # Add expires_at to sessions if missing
+    session_cols = {row[1] for row in conn.execute("PRAGMA table_info(sessions)").fetchall()}
+    if "expires_at" not in session_cols:
+        far_future = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+        conn.execute(
+            f"ALTER TABLE sessions ADD COLUMN expires_at TEXT NOT NULL DEFAULT '{far_future}'"
+        )
 
     # Create sessions table (schema already handles IF NOT EXISTS)
 
@@ -252,18 +261,24 @@ def get_username(conn: sqlite3.Connection, user_id: str) -> str | None:
 
 # --- Session management ---
 
+SESSION_TTL_DAYS = 30
+
+
 def create_session(conn: sqlite3.Connection, user_id: str) -> str:
     token = secrets.token_urlsafe(32)
+    now = utc_now()
+    expires_at = (datetime.now(timezone.utc) + timedelta(days=SESSION_TTL_DAYS)).isoformat()
     conn.execute(
-        "INSERT INTO sessions (id, user_id, created_at) VALUES (?, ?, ?)",
-        (token, user_id, utc_now()),
+        "INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)",
+        (token, user_id, now, expires_at),
     )
     return token
 
 
 def get_user_from_token(conn: sqlite3.Connection, token: str) -> str | None:
+    now = utc_now()
     row = conn.execute(
-        "SELECT user_id FROM sessions WHERE id = ?", (token,)
+        "SELECT user_id FROM sessions WHERE id = ? AND expires_at > ?", (token, now)
     ).fetchone()
     return row["user_id"] if row else None
 

@@ -14,6 +14,8 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { AISidebar } from "@/components/AISidebar";
+import { BoardStats } from "@/components/BoardStats";
+import { CardFilter, defaultFilter, type FilterState } from "@/components/CardFilter";
 import { KanbanColumn } from "@/components/KanbanColumn";
 import { KanbanCardPreview } from "@/components/KanbanCardPreview";
 import { apiFetch } from "@/lib/api";
@@ -42,6 +44,7 @@ export const KanbanBoard = ({ boardId, boardTitle, token, onBack }: KanbanBoardP
   const [board, setBoard] = useState<BoardData | null>(null);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [status, setStatus] = useState<BoardStatus>(initialStatus);
+  const [filter, setFilter] = useState<FilterState>(defaultFilter);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -55,6 +58,20 @@ export const KanbanBoard = ({ boardId, boardTitle, token, onBack }: KanbanBoardP
   };
 
   const cardsById = useMemo(() => board?.cards ?? {}, [board]);
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  const matchesFilter = useMemo(() => {
+    const q = filter.search.trim().toLowerCase();
+    return (cardId: string) => {
+      const card = cardsById[cardId];
+      if (!card) return false;
+      if (q && !card.title.toLowerCase().includes(q) && !card.details.toLowerCase().includes(q)) return false;
+      if (filter.priority !== "all" && card.priority !== filter.priority) return false;
+      if (filter.overdueOnly && (!card.due_date || card.due_date >= todayStr)) return false;
+      return true;
+    };
+  }, [cardsById, filter, todayStr]);
 
   const fetchBoard = useCallback(async () => {
     setStatus((prev) => ({ ...prev, isLoading: true, errorMessage: null }));
@@ -287,12 +304,7 @@ export const KanbanBoard = ({ boardId, boardTitle, token, onBack }: KanbanBoardP
                 {status.errorMessage}
               </span>
             ) : null}
-            <div className="flex items-center gap-2 rounded-full border border-[var(--stroke)] bg-[var(--surface)] px-3 py-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-yellow)]" />
-              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--navy-dark)]">
-                {board.columns.length} columns · {Object.keys(board.cards).length} cards
-              </span>
-            </div>
+            <CardFilter filter={filter} onChange={setFilter} />
             <button
               type="button"
               onClick={handleAddColumn}
@@ -303,6 +315,8 @@ export const KanbanBoard = ({ boardId, boardTitle, token, onBack }: KanbanBoardP
             </button>
           </div>
         </header>
+
+        <BoardStats board={board} />
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="overflow-x-auto">
@@ -323,6 +337,7 @@ export const KanbanBoard = ({ boardId, boardTitle, token, onBack }: KanbanBoardP
                     key={column.id}
                     column={column}
                     cards={column.cardIds.map((cardId) => board.cards[cardId]).filter(Boolean)}
+                    matchesFilter={matchesFilter}
                     onRename={handleRenameColumn}
                     onAddCard={handleAddCard}
                     onDeleteCard={handleDeleteCard}
